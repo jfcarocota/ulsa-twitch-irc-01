@@ -6,18 +6,28 @@ using System.IO;
 
 public class TwitchIRC : MonoBehaviour
 {
-   TcpClient twitchClient;
-   StreamReader reader;
-   StreamWriter writer;
+    TcpClient twitchClient;
+    StreamReader reader;
+    StreamWriter writer;
 
-   [SerializeField]
-   string username, password, channelName;
+    [SerializeField]
+    string username, password, channelName;
 
-   [SerializeField]
-   Transform trsCube;
+    [SerializeField]
+    Transform trsCube;
 
-   float rotSpeed = 0;
+    float rotSpeed = 0;
 
+    [SerializeField]
+    float moveSpeed;
+    [SerializeField]
+    bool isMoving;
+
+    bool isGameEnded;
+
+    [SerializeField]
+    GameObject winText;
+    
     void Start()
     {
         Connect();
@@ -29,8 +39,13 @@ public class TwitchIRC : MonoBehaviour
         {
             Connect();
         }
-        trsCube.Rotate(Vector3.forward * rotSpeed * Time.deltaTime);
+        //trsCube.Rotate(Vector3.forward * rotSpeed * Time.deltaTime);
         ReadChat();
+
+        if(isMoving)
+        {
+            trsCube.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
+        }
     }
 
    void Connect()
@@ -48,24 +63,48 @@ public class TwitchIRC : MonoBehaviour
 
    void ReadChat()
    {
-       if(HasMessage)
+       if(HasMessage && !isGameEnded)
        {
            string message = reader.ReadLine();
            if(message.Contains("PRIVMSG"))
            {
-               int splitPoint = message.IndexOf(":", 1);
-               message = message.Substring(splitPoint + 1).ToLower();
-               if(message.Equals("!rot"))
-               {
-                   rotSpeed = 180f;
-               }
-               if(message.Equals("!stop"))
-               {
-                   rotSpeed = 0f;
-               }
+                int splitPoint = message.IndexOf(":", 1);
+                message = message.Substring(splitPoint + 1).ToLower();
+
+                if(message.Equals("!move"))
+                {
+                    isMoving = true;
+                }
+                if(message.Equals("!stop"))
+                {
+                    isMoving = false;
+                }
+
+                if(message.Equals("!front"))
+                {
+                    trsCube.rotation = Quaternion.LookRotation(Vector3.forward);
+                }
+                if(message.Equals("!left"))
+                {
+                    trsCube.rotation = Quaternion.LookRotation(Vector3.left);
+                }
+                if(message.Equals("!right"))
+                {
+                    trsCube.rotation = Quaternion.LookRotation(Vector3.right);
+                }
            }
        }
    }
+
+    void OnTriggerEnter(Collider other) 
+    {
+        if(other.CompareTag("end"))
+        {
+            isMoving = false;
+            isGameEnded = true;
+            winText.SetActive(true);
+        }
+    }
 
    bool Connected => twitchClient.Connected;
 
